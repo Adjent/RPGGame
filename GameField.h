@@ -4,13 +4,14 @@
 #include <map>
 #include <utility>
 #include <iostream>
+#include <memory>
 
 class UnitFactory;
 
 class GameField {
 private:
+    std::vector<std::unique_ptr<Unit>> units;
     std::vector<std::vector<Unit*>> grid;
-
     std::map<Unit*, std::pair<int, int>> positions;
 
     int width;
@@ -30,7 +31,7 @@ public:
     GameField(GameField&& other) noexcept;
     GameField& operator=(GameField&& other) noexcept;
 
-    bool addUnit(Unit* unit, int x, int y);
+    bool addUnit(std::unique_ptr<Unit> unit, int x, int y);
     void removeUnit(Unit* unit);
     void updatePosition(Unit* unit, int newX, int newY);
     bool isEmpty() const;

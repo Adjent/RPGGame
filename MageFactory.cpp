@@ -1,5 +1,5 @@
 #include "MageFactory.h"
 
-Unit* MageFactory::createRaw(int newId) const {
-    return new Mage(newId);
+std::unique_ptr<Unit> MageFactory::createRaw(int newId) const {
+    return std::make_unique<Mage>(newId);
 }

@@ -1,5 +1,5 @@
 #include "HammerFactory.h"
 
-Unit* HammerFactory::createRaw(int newId) const {
-    return new Hammer(newId);
+std::unique_ptr<Unit> HammerFactory::createRaw(int newId) const {
+    return std::make_unique<Hammer>(newId);
 }

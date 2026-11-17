@@ -7,6 +7,6 @@ public:
     Archer(const Archer& other) = default;
     std::string getType() const override;
     char getSymbol() const override;
-    Unit* clone() const override;
+    std::unique_ptr<Unit> clone() const override;
 };
 

@@ -23,6 +23,6 @@ char Axe::getSymbol() const {
     return 'V';
 }
 
-Unit* Axe::clone() const {
-    return new Axe(*this);
+std::unique_ptr<Unit> Axe::clone() const {
+    return std::make_unique<Axe>(*this);
 }

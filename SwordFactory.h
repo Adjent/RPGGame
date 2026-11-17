@@ -4,5 +4,5 @@
 
 class SwordFactory final : public MeleeFactory {
 protected:
-    Unit* createRaw(int newId) const override;
+	std::unique_ptr<Unit> createRaw(int newId) const override;
 };

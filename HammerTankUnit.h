@@ -8,5 +8,5 @@ public:
     bool attackTarget(Unit* target, GameField* field) override;
     std::string getType() const override;
     char getSymbol() const override;
-    Unit* clone() const override;
+    std::unique_ptr<Unit> clone() const override;
 };

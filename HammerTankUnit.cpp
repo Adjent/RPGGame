@@ -25,6 +25,6 @@ char Hammer::getSymbol()const {
     return 'H';
 }
 
-Unit* Hammer::clone() const {
-    return new Hammer(*this);
+std::unique_ptr<Unit> Hammer::clone() const {
+    return std::make_unique<Hammer>(*this);
 }

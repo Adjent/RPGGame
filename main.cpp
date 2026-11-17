@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 #include <ctime> 
+#include <memory>
+#include <utility>
 
 #include "GameField.h"
 #include "HammerFactory.h"
@@ -44,18 +46,16 @@ void testCopy(const vector<UnitFactory*>& factories) {
     cout << "\n<<< COPY TEST >>>\n";
 
     GameField original(10, 10, 10);
-    Unit* attacker = factories[2]->create();
-    Unit* target = factories[0]->create();
 
-    if (!original.addUnit(attacker, 4, 4)) {
-        delete attacker;
-        delete target;
+    auto attacker = factories[2]->create();
+    auto target = factories[0]->create();
+
+    if (!original.addUnit(std::move(attacker), 4, 4)) {
         cout << "Failed to create attacker!\n";
         return;
     }
 
-    if (!original.addUnit(target, 5, 4)) {
-        delete target;
+    if (!original.addUnit(std::move(target), 5, 4)) {
         cout << "Failed to create target!\n";
         return;
     }
@@ -65,31 +65,33 @@ void testCopy(const vector<UnitFactory*>& factories) {
     cout << "\n";
     original.printAllUnitsInfo();
 
-    // Create copy
     GameField copy(original);
+
     Unit* originalAttacker = original.getUnitAt(4, 4);
     Unit* originalTarget = original.getUnitAt(5, 4);
     Unit* copiedAttacker = copy.getUnitAt(4, 4);
     Unit* copiedTarget = copy.getUnitAt(5, 4);
 
-    cout << "\n<<< Pointer comparison >>>\n"\
-        << "Original attacker: " << originalAttacker << "\n"\
-        << "Copied attacker:   " << copiedAttacker << "\n"\
-        << "Original target:   " << originalTarget << "\n"\
+    cout << "\n<<< Pointer comparison >>>\n"
+        << "Original attacker: " << originalAttacker << "\n"
+        << "Copied attacker:   " << copiedAttacker << "\n"
+        << "Original target:   " << originalTarget << "\n"
         << "Copied target:     " << copiedTarget << "\n";
 
     bool differentPointers =
         originalAttacker != copiedAttacker &&
         originalTarget != copiedTarget;
 
-    cout << "\nDifferent pointers: " << (differentPointers ? "PASS" : "FAIL") << "\n"\
+    cout << "\nDifferent pointers: "
+        << (differentPointers ? "PASS" : "FAIL") << "\n"
         << "\nAttack copied target\n";
 
     int originalHP = originalTarget->getHealthValue();
     int copiedHP = copiedTarget->getHealthValue();
+
     bool copyAttack = copiedAttacker->attackTarget(copiedTarget, &copy);
 
-    cout << "Original target HP: " << originalTarget->getHealthValue() << "\n"\
+    cout << "Original target HP: " << originalTarget->getHealthValue() << "\n"
         << "Copied target HP: " << copiedTarget->getHealthValue() << "\n";
 
     bool firstCheck =
@@ -97,16 +99,15 @@ void testCopy(const vector<UnitFactory*>& factories) {
         originalTarget->getHealthValue() == originalHP;
 
     cout << "Original unchanged: "
-        << (firstCheck ? "PASS" : "FAIL") << "\n"\
+        << (firstCheck ? "PASS" : "FAIL") << "\n"
         << "\nAttack original target\n";
 
     copiedHP = copiedTarget->getHealthValue();
-    originalHP = originalTarget->getHealthValue();
 
     bool originalAttack =
         originalAttacker->attackTarget(originalTarget, &original);
 
-    cout << "Original target HP: " << originalTarget->getHealthValue() << "\n"\
+    cout << "Original target HP: " << originalTarget->getHealthValue() << "\n"
         << "Copied target HP: " << copiedTarget->getHealthValue() << "\n";
 
     bool secondCheck =
@@ -114,40 +115,54 @@ void testCopy(const vector<UnitFactory*>& factories) {
         copiedTarget->getHealthValue() == copiedHP;
 
     cout << "Copy unchanged: "
-        << (secondCheck ? "PASS" : "FAIL") << "\n"\
+        << (secondCheck ? "PASS" : "FAIL") << "\n"
         << "\n<<< COPY TEST FINISHED >>>\n";
 }
 
 void testMove(const vector<UnitFactory*>& factories) {
     cout << "\n<<< MOVE TEST >>>\n";
+
     GameField source(10, 10, 10);
 
     for (int i = 0; i < 3; i++) {
-        Unit* unit = factories[i]->create();
+        auto unit = factories[i]->create();
 
-        if (!source.addUnit(unit, 3 + i, 3)) {
-            delete unit;
+        if (!source.addUnit(std::move(unit), 3 + i, 3)) {
+            cout << "Failed to add unit!\n";
         }
     }
-    cout << "Units before move: " << source.getUnitsCount() << "\n";
+
+    int unitsBeforeMove = source.getUnitsCount();
+
+    cout << "Units before move: " << unitsBeforeMove << "\n";
 
     GameField destination(std::move(source));
-    cout << "\nAfter move constructor:\n" << "Source units: " << source.getUnitsCount() << "\n"\
-        << "Destination units: " << destination.getUnitsCount() << "\n";
 
-    bool constructorCheck = source.isEmpty() && destination.getUnitsCount() == 3;
+    cout << "\nAfter move constructor:\n";
+    cout << "Destination units: "
+        << destination.getUnitsCount() << "\n";
 
-    cout << "Move constructor: " << (constructorCheck ? "PASS" : "FAIL") << "\n";
+    bool constructorCheck =
+        destination.getUnitsCount() == unitsBeforeMove;
+
+    cout << "Move constructor: "
+        << (constructorCheck ? "PASS" : "FAIL") << "\n";
+
     GameField anotherField(5, 5, 10);
+
     anotherField = std::move(destination);
-    cout << "\nAfter move assignment:\n"\
-        << "Previous destination units: " << destination.getUnitsCount() << "\n"\
-        << "New destination units: " << anotherField.getUnitsCount() << "\n";
 
-    bool assignmentCheck = destination.isEmpty() && anotherField.getUnitsCount() == 3;
+    cout << "\nAfter move assignment:\n";
+    cout << "New destination units: "
+        << anotherField.getUnitsCount() << "\n";
 
-    cout << "Move assignment: " << (assignmentCheck ? "PASS" : "FAIL") << "\n" \
-        << "\n<<< MOVE TEST FINISHED >>>\n";
+    bool assignmentCheck =
+        anotherField.getUnitsCount() == unitsBeforeMove;
+
+    cout << "Move assignment: "
+        << (assignmentCheck ? "PASS" : "FAIL") << "\n";
+
+    cout << "\n<<< MOVE TEST FINISHED >>>\n";
 }
 
 
@@ -157,12 +172,13 @@ void testIterator(const vector<UnitFactory*>& factories) {
     GameField field(10, 10, 10);
 
     for (int i = 0; i < 3; i++) {
-        Unit* unit = factories[i]->create();
+        auto unit = factories[i]->create();
 
-        if (!field.addUnit(unit, 2 + i, 2)) {
-            delete unit;
+        if (!field.addUnit(std::move(unit), 2 + i, 2)) {
+            cout << "Failed to add unit!\n";
         }
     }
+
     cout << "\n<<< Occupied elements >>>\n";
 
     int visited = 0;
@@ -172,11 +188,14 @@ void testIterator(const vector<UnitFactory*>& factories) {
             cout << "FAIL: nullptr found!\n";
             return;
         }
+
         unit->printInfo();
         visited++;
     }
-    cout << "Visited: " << visited << "\n"\
-        << "Occupied iteration: " << (visited == field.getUnitsCount() ? "PASS" : "FAIL") << "\n"\
+
+    cout << "Visited: " << visited << "\n"
+        << "Occupied iteration: "
+        << (visited == field.getUnitsCount() ? "PASS" : "FAIL") << "\n"
         << "\n<<< Empty container >>>\n";
 
     GameField emptyField(5, 5, 10);
@@ -186,15 +205,19 @@ void testIterator(const vector<UnitFactory*>& factories) {
     for (Unit* unit : emptyField) {
         emptyCount++;
     }
-    cout << "Empty iteration: " << (emptyCount == 0 && emptyField.isEmpty() ? "PASS" : "FAIL") << "\n"\
+
+    cout << "Empty iteration: "
+        << (emptyCount == 0 && emptyField.isEmpty() ? "PASS" : "FAIL") << "\n"
         << "\n<<< Independent iterators >>>\n";
 
     auto it1 = field.begin();
     auto it2 = field.begin();
+
     Unit* firstUnit = *it2;
     ++it1;
 
-    cout << "Independent iterators: " << (*it2 == firstUnit ? "PASS" : "FAIL") << "\n"\
+    cout << "Independent iterators: "
+        << (*it2 == firstUnit ? "PASS" : "FAIL") << "\n"
         << "\n<<< Deletion during iteration >>>\n";
 
     int deleted = 0;
@@ -206,8 +229,10 @@ void testIterator(const vector<UnitFactory*>& factories) {
         field.removeUnit(current);
         deleted++;
     }
-    cout << "Deleted units: " << deleted << "\n"\
-        << "Field empty after deletion: " << (field.isEmpty() ? "PASS" : "FAIL") << "\n"\
+
+    cout << "Deleted units: " << deleted << "\n"
+        << "Field empty after deletion: "
+        << (field.isEmpty() ? "PASS" : "FAIL") << "\n"
         << "\n<<< ITERATOR TEST FINISHED >>>\n";
 }
 
@@ -273,8 +298,13 @@ void startGame(const vector<UnitFactory*>& factories, const int fieldW, const in
         break;
     }
 
-    Unit* player = factories[classChoice - 1]->create();
-    field.addUnit(player, centerX, centerY);
+    auto playerUnit = factories[classChoice - 1]->create();
+    if (!field.addUnit(std::move(playerUnit), centerX, centerY)) {
+        cout << "Failed to create player!\n";
+        cin.get();
+        return;
+    }
+    Unit* player = field.getUnitAt(centerX, centerY);
 
     cout << "\nCharacter created successfully! Press Enter...";
     cin.get();

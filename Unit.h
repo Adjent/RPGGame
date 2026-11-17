@@ -4,6 +4,7 @@
 #include "Armor.h"
 #include <string>
 #include <iostream>
+#include <memory>
 
 class GameField;
 
@@ -40,7 +41,7 @@ public:
     virtual bool attackTarget(Unit* target, GameField* field);
     virtual void takeDamage(int rawDamage);
 
-    virtual Unit* clone() const = 0;
+    virtual std::unique_ptr<Unit> clone() const = 0;
     virtual std::string getType() const = 0;
     virtual char getSymbol() const = 0;
     virtual void printInfo() const;

@@ -10,6 +10,6 @@ char Archer::getSymbol() const {
     return 'A';
 }
 
-Unit* Archer::clone() const {
-    return new Archer(*this);
+std::unique_ptr<Unit> Archer::clone() const {
+    return std::make_unique<Archer>(*this);
 }

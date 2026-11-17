@@ -12,7 +12,7 @@ void Unit::reduceArmor(int amount) {
 
 bool Unit::attackTarget(Unit* target, GameField* field) {
 
-    if (!target || target->isDead()) return false;
+    if (!target || !field || target->isDead() || isDead())return false;
     int distance = std::abs(field->getX(this) - field->getX(target)) +
         std::abs(field->getY(this) - field->getY(target));
 

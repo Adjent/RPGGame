@@ -10,6 +10,6 @@ char Mace::getSymbol() const {
     return 'M';
 }
 
-Unit* Mace::clone() const {
-    return new Mace(*this);
+std::unique_ptr<Unit> Mace::clone() const {
+    return std::make_unique<Mace> (*this);
 }

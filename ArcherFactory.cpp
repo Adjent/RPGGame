@@ -1,5 +1,5 @@
 #include "ArcherFactory.h"
 
-Unit* ArcherFactory::createRaw(int newId) const {
-    return new Archer(newId);
+std::unique_ptr<Unit> ArcherFactory::createRaw(int newId) const {
+    return std::make_unique<Archer>(newId);
 }

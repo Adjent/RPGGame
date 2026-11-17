@@ -1,5 +1,5 @@
 #include "AxeFactory.h"
 
-Unit* AxeFactory::createRaw(int newId) const {
-    return new Axe(newId);
+std::unique_ptr<Unit> AxeFactory::createRaw(int newId) const {
+    return std::make_unique<Axe>(newId);
 }

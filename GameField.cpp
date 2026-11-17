@@ -1,6 +1,7 @@
 #include "GameField.h"
 #include "UnitFactory.h"
 #include <cstdlib>
+#include <stdexcept>
 
 
 GameField::GameField(int w, int h, int maxU)
@@ -13,11 +14,9 @@ GameField::~GameField() {
 }
 
 void GameField::clear() {
-    for (auto& pair : positions) {
-        delete pair.first;
-    }
     positions.clear();
     grid.clear();
+    units.clear();
     currentUnitsCount = 0;
 }
 
@@ -25,16 +24,17 @@ void GameField::copyFrom(const GameField& other) {
     width = other.width;
     height = other.height;
     maxUnits = other.maxUnits;
-    currentUnitsCount = other.currentUnitsCount;
+    currentUnitsCount = 0;
     grid.resize(height, std::vector<Unit*>(width, nullptr));
 
     for (const auto& pair : other.positions) {
         Unit* originalUnit = pair.first;
         int x = pair.second.first;
         int y = pair.second.second;
-        Unit* clonedUnit = originalUnit->clone();
-        grid[y][x] = clonedUnit;
-        positions[clonedUnit] = { x, y };
+        std::unique_ptr<Unit> clonedUnit = originalUnit->clone();
+        if (!addUnit(std::move(clonedUnit), x, y)) {
+            throw std::runtime_error("Failed to copy unit");
+        }
     }
 }
 
@@ -51,10 +51,15 @@ GameField& GameField::operator=(const GameField& other) {
 }
 
 GameField::GameField(GameField&& other) noexcept
-    : grid(std::move(other.grid)),
+    : units(std::move(other.units)),
+    grid(std::move(other.grid)),
     positions(std::move(other.positions)),
-    width(other.width), height(other.height),
-    maxUnits(other.maxUnits), currentUnitsCount(other.currentUnitsCount) {
+    width(other.width),
+    height(other.height),
+    maxUnits(other.maxUnits),
+    currentUnitsCount(other.currentUnitsCount) {
+
+    other.units.clear();
     other.grid.clear();
     other.positions.clear();
     other.width = 0;
@@ -66,11 +71,15 @@ GameField::GameField(GameField&& other) noexcept
 GameField& GameField::operator=(GameField&& other) noexcept {
     if (this != &other) {
         clear();
+        units = std::move(other.units);
         grid = std::move(other.grid);
         positions = std::move(other.positions);
-        width = other.width; height = other.height;
-        maxUnits = other.maxUnits; currentUnitsCount = other.currentUnitsCount;
+        width = other.width;
+        height = other.height;
+        maxUnits = other.maxUnits;
+        currentUnitsCount = other.currentUnitsCount;
 
+        other.units.clear();
         other.grid.clear();
         other.positions.clear();
         other.width = 0;
@@ -105,35 +114,51 @@ void GameField::printField() const {
     for (int x = 0; x < width + 2; ++x) std::cout << "X ";
 }
 
-bool GameField::addUnit(Unit* unit, int x, int y) {
-    if (!unit) return false;
-    if (positions.find(unit) != positions.end()) return false;
-    if (currentUnitsCount >= maxUnits) return false;
-    if (x < 0 || x >= width || y < 0 || y >= height) return false;
-    if (grid[y][x] != nullptr) return false;
+bool GameField::addUnit(std::unique_ptr<Unit> unit, int x, int y) {
+    if (!unit || x < 0 || x >= width || y < 0 || y >= height)
+        return false;
+    if (currentUnitsCount >= maxUnits || grid[y][x] != nullptr)
+        return false;
 
-    grid[y][x] = unit;
-    positions[unit] = { x, y };
+    Unit* rawUnit = unit.get();
+    grid[y][x] = rawUnit;
+    positions[rawUnit] = { x, y };
+    units.push_back(std::move(unit));
     currentUnitsCount++;
     return true;
 }
 
 void GameField::removeUnit(Unit* unit) {
     auto it = positions.find(unit);
+
     if (it != positions.end()) {
         int x = it->second.first;
         int y = it->second.second;
 
         grid[y][x] = nullptr;
-        delete unit;
         positions.erase(it);
+
+        for (auto ownerIt = units.begin(); ownerIt != units.end(); ++ownerIt) {
+            if (ownerIt->get() == unit) {
+                units.erase(ownerIt);
+                break;
+            }
+        }
+
         currentUnitsCount--;
     }
 }
 
 void GameField::updatePosition(Unit* unit, int newX, int newY) {
     auto it = positions.find(unit);
+
     if (it == positions.end()) return;
+
+    if (newX < 0 || newX >= width || newY < 0 || newY >= height)
+        return;
+
+    if (grid[newY][newX] != nullptr)
+        return;
 
     int oldX = it->second.first;
     int oldY = it->second.second;
@@ -185,7 +210,7 @@ GameField::Iterator::Iterator(const GameField* f, int x, int y)
 }
 
 bool GameField::Iterator::operator!=(const Iterator& other) const {
-    return curX != other.curX || curY != other.curY;
+    return field != other.field || curX != other.curX || curY != other.curY;
 }
 
 void GameField::Iterator::findNext() {
@@ -249,8 +274,8 @@ void GameField::removeDeadUnits() {
 }
 
 void GameField::populate(UnitFactory* factory, int count) {
-    if (!factory) return;
-    if (width <= 0 || height <= 0 || !factory || count <= 0)return;
+    if (!factory || width <= 0 || height <= 0 || count <= 0)
+        return;
 
     int placed = 0;
     int attempts = 0;
@@ -259,15 +284,15 @@ void GameField::populate(UnitFactory* factory, int count) {
     while (placed < count && attempts < maxAttempts) {
         int randX = rand() % width;
         int randY = rand() % height;
+
         if (grid[randY][randX] == nullptr) {
-            Unit* newUnit = factory->create();
-            if (addUnit(newUnit, randX, randY)) {
+            std::unique_ptr<Unit> newUnit = factory->create();
+
+            if (addUnit(std::move(newUnit), randX, randY)) {
                 placed++;
             }
-            else {
-                delete newUnit;
-            }
         }
+
         attempts++;
     }
 }

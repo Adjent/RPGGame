@@ -10,6 +10,6 @@ char Sword::getSymbol()const {
     return 'S';
 }
 
-Unit* Sword::clone() const {
-    return new Sword(*this);
+std::unique_ptr<Unit> Sword::clone() const {
+    return std::make_unique<Sword>(*this);
 }

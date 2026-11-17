@@ -25,6 +25,6 @@ char Mage::getSymbol()const {
     return 'W';
 }
 
-Unit* Mage::clone() const {
-    return new Mage(*this);
+std::unique_ptr<Unit> Mage::clone() const {
+    return std::make_unique<Mage>(*this);
 }
